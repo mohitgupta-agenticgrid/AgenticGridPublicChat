@@ -24,6 +24,7 @@ class ChatApp {
         this.sidebarToggle = document.getElementById('sidebarToggle');
         this.greeting = document.getElementById('greeting');
         this.profilePic = document.getElementById('profilePic');
+        this.clientLogo = document.getElementById('clientLogo');
         // this.addBtn = document.getElementById('addBtn');
         // this.addOptionsPopup = document.getElementById('addOptionsPopup');
     }
@@ -61,6 +62,7 @@ class ChatApp {
         const urlParams = new URLSearchParams(window.location.search);
         const agentIdFromUrl = urlParams.get('agentid');
         const avatarFromUrl = urlParams.get('avatar');
+        const logoFromUrl = urlParams.get('logo');
 
         if (agentIdFromUrl) {
             this.config.agentId = agentIdFromUrl;
@@ -73,6 +75,10 @@ class ChatApp {
             const decodedAvatarUrl = decodeURIComponent(avatarFromUrl);
             this.profilePic.src = decodedAvatarUrl;
             this.avatarUrl = decodedAvatarUrl;
+        }
+
+        if (logoFromUrl) {
+            this.clientLogo.src = decodeURIComponent(logoFromUrl);
         }
 
         if (this.isDemoMode) {

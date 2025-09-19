@@ -170,6 +170,15 @@ body {
 
 .header-logo {
     height: 25px;
+    max-height: 40px;
+    max-width: 150px;
+    object-fit: contain;
+}
+
+.right-logo {
+    width: 150px;
+    height: 40px;
+    object-position: right;
 }
 
 .build-agent-btn {
@@ -182,7 +191,7 @@ body {
     font-weight: 500;
     font-size: 14px;
     position:relative;
-    left: -27px; /* adjust value as needed */
+    left: 0px; /* adjust value as needed */
     top: 7px; /* adjust value as needed */
 }
 

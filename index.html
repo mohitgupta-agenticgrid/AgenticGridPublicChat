@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat UI-v4</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-icon sidebar-toggle" id="sidebarToggle" data-tooltip="Open sidebar">
+                <img src="src/assets/agentic_scale_ai_logo.png" alt="Sidebar Toggle">
+                <!-- <span class="sidebar-text-toggle">Collapse</span> -->
+                <!-- <span class="sidebar-text-toggle"></span> -->
+            </div>
+            <div class="sidebar-icon" data-tooltip="New Chat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span class="sidebar-text">New Chat</span>
+            </div>
+            <div class="sidebar-icon" data-tooltip="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span class="sidebar-text">Search</span>
+            </div>
+            <div class="sidebar-icon" data-tooltip="Upload Image">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                <span class="sidebar-text">Upload Image</span>
+            </div>
+            <div class="sidebar-bottom">
+                <div class="sidebar-icon" data-tooltip="Pay.com.au">
+                    <img src="src/assets/pay_com_au_icon.jpeg" class="sidebar-img" alt="Pay.com.au">
+                    <!-- <span class="sidebar-text">Pay.com.au</span> -->
+                </div>
+            </div>
+        </div>
+        <div class="page-content" id="pageContent">
+            <div class="page-header">
+                <img src="src/assets/agentic_scale_ai.png" alt="AgenticScale.ai Logo" class="header-logo left-logo">
+                <button class="build-agent-btn">Build your AI Agent</button>
+                <img src="src/assets/pay-com-au-1.svg" alt="pay.com.au Logo" class="header-logo right-logo">
+            </div>
+            <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+            <div id="thankYouScreen" class="thank-you-screen" style="display: none;">
+                <div class="thank-you-content">
+                    <h2>Thank You for Chatting!</h2>
+                    <p>Your conversation has ended. We hope to see you again soon!</p>
+                    <button id="startNewChatBtn">Start New Chat</button>
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="chat-container">
+                    <div id="welcomeScreen" class="chat-header">
+                        <img src="src/assets/Blank_avatar.png" alt="Jordan" class="profile-pic" id="profilePic">
+                        <div class="agent-title">
+                            <h1 id="greeting"></h1>
+                        </div>
+                    </div>
+                    <div id="chatMessages" class="chat-messages" style="display: none;">
+                    </div>
+                    <div class="chat-input-container">
+                        <div class="chat-input">
+                            <button class="icon-btn add-btn" id="addBtn" data-tooltip="Add files and more">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                            <!-- <div id="addOptionsPopup" class="add-options-popup">
+                                <div class="popup-item"><span class="popup-icon">📎</span> Add photos & files</div>
+                                <div class="popup-item"><span class="popup-icon">🔬</span> Deep research</div>
+                                <div class="popup-item"><span class="popup-icon">🖼️</span> Create image</div>
+                                <div class="popup-item"><span class="popup-icon">🤖</span> Agent mode</div>
+                                <div class="popup-item"><span class="popup-icon">🔌</span> Use connectors</div>
+                                <div class="popup-item more-item"><span>...</span> More <span class="arrow">></span></div>
+                            </div> -->
+                            <input type="text" id="messageInput" placeholder="Ask anything to Elise, your Digital Assistant Agent">
+                            <div class="input-icons">
+                                <button class="icon-btn mic-btn" id="voiceButton">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                                </button>
+                                <button class="icon-btn send-btn" id="sendButton">
+                                    <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                                </button>
+
+                                <!-- <button class="voice-btn" aria-label="Start voice input">
+                                    <span class="voice-btn__inner">
+                                      <span class="bar"></span>
+                                      <span class="bar"></span>
+                                      <span class="bar"></span>
+                                      <span class="bar"></span>
+                                    </span>
+                                  </button> -->
+
+                                  
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="page-footer">
+                Powered by AgenticScale.ai 2025
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

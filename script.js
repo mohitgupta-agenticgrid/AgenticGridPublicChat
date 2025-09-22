@@ -79,6 +79,8 @@ class ChatApp {
 
         if (logoFromUrl) {
             this.clientLogo.src = decodeURIComponent(logoFromUrl);
+        } else {
+            this.clientLogo.src = 'src/assets/blank_sidebar_logo.png';
         }
 
         if (this.isDemoMode) {

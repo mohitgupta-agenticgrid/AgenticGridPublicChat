@@ -109,7 +109,7 @@ class ChatApp {
         this.startNewChatBtn.addEventListener('click', () => window.location.reload());
         // this.themeSwitcher.addEventListener('click', () => this.toggleTheme());
         // this.endChatBtn.addEventListener('click', () => this.endChat());
-        this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
+        // this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
 
         this.buildAgentBtn.addEventListener('click', () => {
             window.open('https://www.agenticscale.ai/build-my-agent', '_blank');
@@ -143,6 +143,7 @@ class ChatApp {
         }
     }
 
+    /*
     toggleSidebar() {
         this.sidebar.classList.toggle('open');
         const tooltip = this.sidebarToggle.getAttribute('data-tooltip');
@@ -152,6 +153,7 @@ class ChatApp {
             this.sidebarToggle.setAttribute('data-tooltip', 'Open sidebar');
         }
     }
+    */
 
     toggleTheme() {
         document.body.classList.toggle('dark-mode');

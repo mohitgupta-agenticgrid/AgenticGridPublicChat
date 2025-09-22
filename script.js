@@ -25,6 +25,7 @@ class ChatApp {
         this.greeting = document.getElementById('greeting');
         this.profilePic = document.getElementById('profilePic');
         this.clientLogo = document.getElementById('clientLogo');
+        this.buildAgentBtn = document.getElementById('buildAgentBtn');
         // this.addBtn = document.getElementById('addBtn');
         // this.addOptionsPopup = document.getElementById('addOptionsPopup');
     }
@@ -109,6 +110,10 @@ class ChatApp {
         // this.themeSwitcher.addEventListener('click', () => this.toggleTheme());
         // this.endChatBtn.addEventListener('click', () => this.endChat());
         this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
+
+        this.buildAgentBtn.addEventListener('click', () => {
+            window.open('https://www.agenticscale.ai/build-my-agent', '_blank');
+        });
 
         /*
         this.addBtn.addEventListener('click', (event) => {

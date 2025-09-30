@@ -688,3 +688,57 @@ body.dark-mode {
 .dark-mode .chat-input .icon-btn:hover {
     background-color: #444;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+
+    .build-agent-btn {
+        position: static;
+        order: 3;
+    }
+
+    .header-logo.left-logo {
+        order: 1;
+    }
+
+    .header-logo.right-logo {
+        order: 2;
+        height: 40px;
+    }
+    
+    .profile-pic {
+        width: 80px;
+        height: 80px;
+        margin-top: -20px;
+    }
+
+    .chat-header h1 {
+        font-size: 1.4rem;
+    }
+
+    .chat-container {
+        padding: 10px;
+    }
+    
+    .chat-messages {
+        padding: 10px;
+    }
+
+    .message-bubble {
+        max-width: 85%;
+        padding: 8px 15px;
+    }
+
+    .chat-input-container {
+        padding: 0 10px 10px;
+    }
+
+    .chat-input input {
+        font-size: 0.95rem;
+    }
+}

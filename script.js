@@ -408,6 +408,15 @@ class ChatApp {
 document.addEventListener('DOMContentLoaded', () => {
     const app = new ChatApp();
     app.setRandomGreeting();
+
+    const setVh = () => {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    setVh();
+    window.addEventListener('resize', setVh);
+
     console.log("Current URL:", window.location.href);
     console.log("Using Agent ID:", app.config.agentId);
     console.log("Using Avatar:", app.profilePic.src);

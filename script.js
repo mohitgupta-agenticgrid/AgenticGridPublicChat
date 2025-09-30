@@ -233,10 +233,12 @@ class ChatApp {
     handleWebSocketMessage(data) {
         try {
             const message = JSON.parse(data);
-            this.hideTypingIndicator();
             if (message.type === 'audio') return;
             const responseText = message.agent_response_event?.agent_response || message.text || message.agent_response;
-            if (responseText) this.showMessage(responseText, 'ai');
+            if (responseText) {
+                this.hideTypingIndicator();
+                this.showMessage(responseText, 'ai');
+            }
         } catch (error) {
             if (typeof data === 'string' && data.trim()) {
                 this.hideTypingIndicator();
@@ -344,11 +346,35 @@ class ChatApp {
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `message-bubble ${sender}-message`;
-        messageDiv.innerHTML = `<div class="message-content"><p>${text}</p></div>`;
+        
+        if (sender === 'ai') {
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            const p = document.createElement('p');
+            messageContent.appendChild(p);
+            messageDiv.appendChild(messageContent);
+            this.typewriterEffect(p, text);
+        } else {
+            messageDiv.innerHTML = `<div class="message-content"><p>${text}</p></div>`;
+        }
         
         messageRow.appendChild(messageDiv);
         this.chatMessages.appendChild(messageRow);
         this.scrollToBottom();
+    }
+
+    typewriterEffect(element, text, speed = 20) {
+        let i = 0;
+        element.innerHTML = "";
+        const typing = () => {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+                this.scrollToBottom();
+                setTimeout(typing, speed);
+            }
+        };
+        typing();
     }
 
     showTypingIndicator() {

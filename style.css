@@ -692,6 +692,9 @@ body.dark-mode {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .main-content {
+        justify-content: flex-start;
+    }
     .page-header {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -730,7 +733,7 @@ body.dark-mode {
 
     .chat-container {
         justify-content: flex-start;
-        padding-top: 30px;
+        padding-top: 0;
     }
 
     .profile-pic {
@@ -742,5 +745,14 @@ body.dark-mode {
     
     .chat-header h1 {
         font-size: 1.4rem;
+    }
+
+    .chat-avatar {
+        flex-shrink: 0;
+    }
+    
+    .chat-messages {
+        padding: 10px;
+        margin-top: 0;
     }
 }

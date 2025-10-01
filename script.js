@@ -13,6 +13,8 @@ class ChatApp {
         this.sendButton = document.getElementById('sendButton');
         this.voiceButton = document.getElementById('voiceButton');
         this.loadingOverlay = document.getElementById('loadingOverlay');
+        this.mainContent = document.querySelector('.main-content');
+        this.chatContainer = document.querySelector('.chat-container');
         // this.statusText = document.querySelector('.status-text');
         this.thankYouScreen = document.getElementById('thankYouScreen');
         this.startNewChatBtn = document.getElementById('startNewChatBtn');
@@ -23,6 +25,7 @@ class ChatApp {
         this.sidebar = document.getElementById('sidebar');
         this.sidebarToggle = document.getElementById('sidebarToggle');
         this.greeting = document.getElementById('greeting');
+        this.agentDescription = document.getElementById('agentDescription');
         this.profilePic = document.getElementById('profilePic');
         this.clientLogo = document.getElementById('clientLogo');
         this.buildAgentBtn = document.getElementById('buildAgentBtn');
@@ -64,6 +67,7 @@ class ChatApp {
         const agentIdFromUrl = urlParams.get('agentid');
         const avatarFromUrl = urlParams.get('avatar');
         const logoFromUrl = urlParams.get('logo');
+        const descriptionFromUrl = urlParams.get('description');
 
         if (agentIdFromUrl) {
             this.config.agentId = agentIdFromUrl;
@@ -76,12 +80,18 @@ class ChatApp {
             const decodedAvatarUrl = decodeURIComponent(avatarFromUrl);
             this.profilePic.src = decodedAvatarUrl;
             this.avatarUrl = decodedAvatarUrl;
+        } else {
+            this.avatarUrl = 'src/assets/Blank_avatar.png';
         }
 
         if (logoFromUrl) {
             this.clientLogo.src = decodeURIComponent(logoFromUrl);
         } else {
             this.clientLogo.src = 'src/assets/blank_sidebar_logo.png';
+        }
+
+        if (descriptionFromUrl) {
+            this.agentDescription.textContent = decodeURIComponent(descriptionFromUrl);
         }
 
         if (this.isDemoMode) {
@@ -294,6 +304,8 @@ class ChatApp {
         if (!this.chatStarted) {
             this.welcomeScreen.style.display = 'none';
             this.chatMessages.style.display = 'block';
+            this.mainContent.classList.add('chat-started');
+            this.chatContainer.classList.add('chat-started');
             this.chatStarted = true;
         }
         

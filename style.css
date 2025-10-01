@@ -249,6 +249,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
+}
+
+.agent-description {
+    font-size: 1rem;
+    color: #6c757d;
+    margin-bottom: 5px;
 }
 
 .status-dot {
@@ -692,7 +699,7 @@ body.dark-mode {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .main-content {
+    .main-content.chat-started {
         justify-content: flex-start;
     }
     .page-header {
@@ -731,7 +738,7 @@ body.dark-mode {
         top: 0; /* Reset desktop style */
     }
 
-    .chat-container {
+    .chat-container.chat-started {
         justify-content: flex-start;
         padding-top: 0;
     }
@@ -740,7 +747,11 @@ body.dark-mode {
         width: 80px;
         height: 80px;
         margin-top: 0;
-        margin-bottom: 20px;
+        margin-bottom: 5px;
+    }
+
+    .agent-description {
+        margin-bottom: 15px;
     }
     
     .chat-header h1 {

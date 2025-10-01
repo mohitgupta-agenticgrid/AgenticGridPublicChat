@@ -285,7 +285,7 @@ body {
 }
 
 .chat-input-container {
-    width: 100%;
+    width: 90%;
     display: flex;
     justify-content: center;
     padding-bottom: 10px; /* for the chat input container up-down */
@@ -699,6 +699,10 @@ body.dark-mode {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .sidebar {
+        display: none;
+    }
+
     .main-content.chat-started {
         justify-content: flex-start;
     }

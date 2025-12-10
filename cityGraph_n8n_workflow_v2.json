@@ -1,0 +1,382 @@
+{
+  "name": "cityGraph_n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "citygraph-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 400],
+      "webhookId": "citygraph-main-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "operation": "equals",
+              "value2": "chat"
+            }
+          ]
+        }
+      },
+      "id": "check-action-chat",
+      "name": "Is Chat Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "operation": "equals",
+              "value2": "extract_address"
+            }
+          ]
+        }
+      },
+      "id": "check-action-extract",
+      "name": "Is Address Extract?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "operation": "equals",
+              "value2": "batch_extract"
+            }
+          ]
+        }
+      },
+      "id": "check-action-batch",
+      "name": "Is Batch Extract?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fetch files from GitHub repository\nconst repoOwner = 'InnovateGPT';\nconst repoName = 'cityGraph_AG_MG';\nconst filePath = $json.body?.file_path || $json.file_path || 'app.py';\n\nconst items = [];\n\nitems.push({\n  json: {\n    repo_owner: repoOwner,\n    repo_name: repoName,\n    file_path: filePath,\n    github_url: `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`\n  }\n});\n\nreturn items;"
+      },
+      "id": "prepare-github-request",
+      "name": "Prepare GitHub Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "={{ $json.github_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "fetch-github-file",
+      "name": "Fetch GitHub File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-header-auth",
+          "name": "GitHub Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decode GitHub file content and extract address service logic\nconst items = [];\n\nfor (const item of $input.all()) {\n  const content = item.json.content;\n  \n  if (content) {\n    // Decode base64 content from GitHub\n    const decodedContent = Buffer.from(content, 'base64').toString('utf-8');\n    \n    // Parse for address extraction patterns\n    const hasAddressService = decodedContent.includes('address_service') || \n                              decodedContent.includes('extract_addresses');\n    const hasBatchService = decodedContent.includes('batch_service');\n    const hasOpenAI = decodedContent.includes('openai') || decodedContent.includes('OpenAI');\n    \n    items.push({\n      json: {\n        ...item.json,\n        decoded_content: decodedContent,\n        file_name: item.json.name,\n        file_path: item.json.path,\n        has_address_service: hasAddressService,\n        has_batch_service: hasBatchService,\n        has_openai_integration: hasOpenAI,\n        content_length: decodedContent.length\n      }\n    });\n  } else {\n    items.push(item);\n  }\n}\n\nreturn items;"
+      },
+      "id": "decode-and-analyze",
+      "name": "Decode and Analyze",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process chat messages - integrates with OpenAI for cityGraph queries\nconst items = [];\n\nfor (const item of $input.all()) {\n  const userMessage = item.json.body?.message || item.json.message || '';\n  const userId = item.json.body?.user_id || item.json.user_id || 'anonymous';\n  const sessionId = item.json.body?.session_id || item.json.session_id || Date.now().toString();\n  \n  let response = '';\n  let context = {};\n  \n  // Detect intent from message\n  const messageLower = userMessage.toLowerCase();\n  \n  if (messageLower.includes('extract') && (messageLower.includes('address') || messageLower.includes('suburb'))) {\n    // Address extraction intent\n    const suburbMatch = userMessage.match(/(?:for|in|at)\\s+([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*)/i);\n    const suburb = suburbMatch ? suburbMatch[1] : null;\n    \n    if (suburb) {\n      response = `I'll help you extract addresses for ${suburb}. This will process the SA2 boundaries and G-NAF address data for that location. Would you like to proceed with the extraction?`;\n      context = {\n        intent: 'extract_addresses',\n        suburb: suburb,\n        needs_confirmation: true\n      };\n    } else {\n      response = `I can help you extract Australian addresses from SA2 boundaries. Please specify the suburb or location you're interested in. For example: \"Extract addresses for Mount Waverley\"`;\n      context = {\n        intent: 'extract_addresses',\n        needs_clarification: true\n      };\n    }\n  } else if (messageLower.includes('batch') || messageLower.includes('multiple locations')) {\n    response = `For batch processing of multiple locations, you can provide a CSV file with suburb names or SA2 codes. The system will process all locations simultaneously and return results as a ZIP archive. Would you like to start a batch extraction?`;\n    context = {\n      intent: 'batch_processing',\n      needs_confirmation: true\n    };\n  } else if (messageLower.includes('postcode') || messageLower.match(/\\d{4}/)) {\n    const postcodeMatch = userMessage.match(/\\d{4}/);\n    const postcode = postcodeMatch ? postcodeMatch[0] : null;\n    \n    if (postcode) {\n      response = `I can extract addresses for postcode ${postcode}. This will retrieve all addresses within that postal area using the G-NAF dataset. Shall I proceed?`;\n      context = {\n        intent: 'extract_by_postcode',\n        postcode: postcode,\n        needs_confirmation: true\n      };\n    } else {\n      response = `Please provide a valid Australian postcode (4 digits) to extract addresses.`;\n    }\n  } else if (messageLower.includes('hello') || messageLower.includes('hi')) {\n    response = `Hello! I'm the cityGraph assistant. I can help you with:\\n\\n1. Extract addresses for specific suburbs\\n2. Batch process multiple locations\\n3. Search by postcode\\n4. Export data in CSV, GeoJSON, or Shapefile formats\\n\\nWhat would you like to do?`;\n    context = {\n      intent: 'greeting'\n    };\n  } else if (messageLower.includes('help')) {\n    response = `CityGraph Help:\\n\\n**Address Extraction:**\\n- Single suburb: \"Extract addresses for [suburb name]\"\\n- Postcode: \"Get addresses for postcode [####]\"\\n- SA2 code: \"Extract SA2 [code]\"\\n\\n**Batch Processing:**\\n- \"I need batch extraction for multiple locations\"\\n\\n**Data Info:**\\n- Uses ABS ASGS SA2 boundaries\\n- Geoscape G-NAF address dataset\\n- Exports: CSV, GeoJSON, Shapefile\\n\\nWhat would you like to know more about?`;\n    context = {\n      intent: 'help'\n    };\n  } else if (messageLower.includes('data') || messageLower.includes('source')) {\n    response = `CityGraph uses official Australian government datasets:\\n\\n1. **ABS ASGS SA2 Boundaries** (CC BY 4.0)\\n   - Statistical geography standard\\n   - ~50-100 MB\\n\\n2. **Geoscape G-NAF Addresses**\\n   - Open dataset from Geoscape Australia\\n   - 2-8 GB per state\\n   - Geocoded national addresses with coordinates\\n\\nBoth datasets are regularly updated and production-ready for commercial use.`;\n    context = {\n      intent: 'data_info'\n    };\n  } else {\n    response = `I received your message: \"${userMessage}\"\\n\\nI'm here to assist with address extraction from Australian datasets. You can:\\n- Extract addresses for specific suburbs\\n- Process batch locations\\n- Search by postcode\\n\\nType \"help\" for more information.`;\n    context = {\n      intent: 'unknown'\n    };\n  }\n  \n  items.push({\n    json: {\n      user_id: userId,\n      session_id: sessionId,\n      user_message: userMessage,\n      bot_response: response,\n      context: context,\n      timestamp: new Date().toISOString(),\n      service: 'citygraph_chat'\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "process-chat",
+      "name": "Process Chat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract addresses from Australian datasets\n// This simulates the address_service.py functionality\nconst items = [];\n\nfor (const item of $input.all()) {\n  const suburb = item.json.body?.suburb || item.json.suburb || '';\n  const sa2Code = item.json.body?.sa2_code || item.json.sa2_code || '';\n  const postcode = item.json.body?.postcode || item.json.postcode || '';\n  \n  // Simulate address extraction\n  // In production, this would call the actual Python service or Streamlit API\n  const mockAddresses = [];\n  \n  if (suburb || sa2Code || postcode) {\n    // Generate sample data structure matching G-NAF format\n    mockAddresses.push({\n      full_address: `123 Example Street, ${suburb || 'SUBURB'}, VIC 3000`,\n      latitude: -37.8136,\n      longitude: 144.9631,\n      locality_name: suburb || 'SUBURB',\n      postcode: postcode || '3000',\n      street_name: 'Example',\n      street_type: 'Street',\n      address_detail_pid: 'GAVIC123456789',\n      geocode_type: 'PROPERTY CENTROID'\n    });\n  }\n  \n  items.push({\n    json: {\n      extraction_type: suburb ? 'suburb' : (sa2Code ? 'sa2' : 'postcode'),\n      input_parameter: suburb || sa2Code || postcode,\n      addresses: mockAddresses,\n      address_count: mockAddresses.length,\n      extraction_timestamp: new Date().toISOString(),\n      data_source: 'Geoscape G-NAF',\n      boundary_source: 'ABS ASGS SA2',\n      export_formats_available: ['csv', 'geojson', 'shapefile'],\n      note: 'This is a mock response. In production, integrate with actual cityGraph services.'\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "extract-addresses",
+      "name": "Extract Addresses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Batch processing for multiple locations\nconst items = [];\n\nfor (const item of $input.all()) {\n  const locations = item.json.body?.locations || item.json.locations || [];\n  const batchId = `batch_${Date.now()}`;\n  \n  const results = locations.map(location => ({\n    location: location,\n    status: 'processing',\n    estimated_addresses: Math.floor(Math.random() * 5000) + 1000,\n    processing_started: new Date().toISOString()\n  }));\n  \n  items.push({\n    json: {\n      batch_id: batchId,\n      total_locations: locations.length,\n      locations: results,\n      status: 'initiated',\n      timestamp: new Date().toISOString(),\n      estimated_completion: '2-5 minutes per location (first run), 2-5 seconds (cached)',\n      output_format: 'ZIP archive with individual CSV files',\n      note: 'This is a mock response. Integrate with actual batch_service.py for production.'\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "batch-extract",
+      "name": "Batch Extract Addresses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, data: $json, action: 'chat', service: 'citygraph' } }}"
+      },
+      "id": "respond-chat",
+      "name": "Respond Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, data: $json, action: 'extract_address', service: 'citygraph' } }}"
+      },
+      "id": "respond-extract",
+      "name": "Respond Extract",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, data: $json, action: 'batch_extract', service: 'citygraph' } }}"
+      },
+      "id": "respond-batch",
+      "name": "Respond Batch",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: 'Invalid action. Use: chat, extract_address, batch_extract', available_actions: ['chat', 'extract_address', 'batch_extract'] } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "https://api.github.com/repos/InnovateGPT/cityGraph_AG_MG/contents",
+        "options": {
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "ref",
+                "value": "main"
+              }
+            ]
+          }
+        }
+      },
+      "id": "get-repo-structure",
+      "name": "Get Repository Structure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 800],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-header-auth",
+          "name": "GitHub Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format repository file list\nconst items = [];\n\nfor (const item of $input.all()) {\n  const files = item.json;\n  \n  // Extract key files and directories\n  const pythonFiles = files.filter(f => f.name.endsWith('.py'));\n  const serviceFiles = files.filter(f => f.path && f.path.includes('services/'));\n  const scriptFiles = files.filter(f => f.path && f.path.includes('scripts/'));\n  \n  items.push({\n    json: {\n      total_files: files.length,\n      python_files: pythonFiles.map(f => f.name),\n      service_files: serviceFiles.map(f => f.name),\n      script_files: scriptFiles.map(f => f.name),\n      repository: 'InnovateGPT/cityGraph_AG_MG',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "format-repo-list",
+      "name": "Format Repository List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 800]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is Chat Request?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Address Extract?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Batch Extract?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Chat Request?": {
+      "main": [
+        [
+          {
+            "node": "Process Chat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Address Extract?": {
+      "main": [
+        [
+          {
+            "node": "Prepare GitHub Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Batch Extract?": {
+      "main": [
+        [
+          {
+            "node": "Batch Extract Addresses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare GitHub Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch GitHub File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GitHub File": {
+      "main": [
+        [
+          {
+            "node": "Decode and Analyze",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decode and Analyze": {
+      "main": [
+        [
+          {
+            "node": "Extract Addresses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Chat": {
+      "main": [
+        [
+          {
+            "node": "Respond Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Addresses": {
+      "main": [
+        [
+          {
+            "node": "Respond Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Extract Addresses": {
+      "main": [
+        [
+          {
+            "node": "Respond Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Repository Structure": {
+      "main": [
+        [
+          {
+            "node": "Format Repository List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2",
+  "id": "citygraph-n8n-workflow-v2",
+  "meta": {
+    "instanceId": "citygraph-instance-v2"
+  },
+  "tags": []
+}

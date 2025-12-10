@@ -1,0 +1,334 @@
+{
+  "name": "cityGraph_n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "citygraph-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "citygraph-main-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "operation": "equals",
+              "value2": "chat"
+            }
+          ]
+        }
+      },
+      "id": "check-action-chat",
+      "name": "Is Chat Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.action }}",
+              "operation": "equals",
+              "value2": "extract_address"
+            }
+          ]
+        }
+      },
+      "id": "check-action-address",
+      "name": "Is Address Extract?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "https://api.github.com/repos/InnovateGPT/cityGraph_AG_MG/contents",
+        "options": {
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "ref",
+                "value": "main"
+              }
+            ]
+          }
+        }
+      },
+      "id": "fetch-github-files",
+      "name": "Fetch GitHub Files",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 500],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-header-auth",
+          "name": "GitHub Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.github.com/repos/InnovateGPT/cityGraph_AG_MG/contents/{{ $json.query.file_path || '' }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "fetch-specific-file",
+      "name": "Fetch Specific File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decode base64 content from GitHub\nconst items = [];\n\nfor (const item of $input.all()) {\n  const content = item.json.content;\n  \n  if (content) {\n    // GitHub returns base64 encoded content\n    const decodedContent = Buffer.from(content, 'base64').toString('utf-8');\n    \n    items.push({\n      json: {\n        ...item.json,\n        decoded_content: decodedContent,\n        file_name: item.json.name,\n        file_path: item.json.path\n      }\n    });\n  } else {\n    items.push(item);\n  }\n}\n\nreturn items;"
+      },
+      "id": "decode-file-content",
+      "name": "Decode File Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract addresses from the content\nconst items = [];\n\nfor (const item of $input.all()) {\n  const content = item.json.decoded_content || item.json.body?.message || '';\n  \n  // Regex patterns for address extraction\n  const addressPatterns = [\n    // Street address pattern (123 Main St, City, ST 12345)\n    /\\d+\\s+[A-Za-z0-9\\s,.-]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Circle|Cir|Way|Place|Pl)(?:[,\\s]+[A-Za-z\\s]+)?(?:[,\\s]+[A-Z]{2})?(?:[,\\s]+\\d{5}(?:-\\d{4})?)?/gi,\n    // City, State ZIP pattern\n    /[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*,\\s*[A-Z]{2}\\s+\\d{5}(?:-\\d{4})?/g,\n    // Full address pattern\n    /\\d+[^,\\n]+,\\s*[^,\\n]+,\\s*[A-Z]{2}\\s+\\d{5}/g\n  ];\n  \n  let addresses = [];\n  \n  for (const pattern of addressPatterns) {\n    const matches = content.match(pattern);\n    if (matches) {\n      addresses = addresses.concat(matches);\n    }\n  }\n  \n  // Remove duplicates\n  addresses = [...new Set(addresses)];\n  \n  items.push({\n    json: {\n      ...item.json,\n      extracted_addresses: addresses,\n      address_count: addresses.length,\n      extraction_timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "extract-addresses",
+      "name": "Extract Addresses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process chat messages and prepare response\nconst items = [];\n\nfor (const item of $input.all()) {\n  const userMessage = item.json.body?.message || item.json.message || '';\n  const userId = item.json.body?.user_id || item.json.user_id || 'anonymous';\n  const sessionId = item.json.body?.session_id || item.json.session_id || Date.now().toString();\n  \n  // Simple chat processing logic\n  // You can integrate with OpenAI, Anthropic, or other LLM APIs here\n  let response = '';\n  \n  // Basic keyword matching for demo\n  if (userMessage.toLowerCase().includes('hello') || userMessage.toLowerCase().includes('hi')) {\n    response = 'Hello! How can I help you with cityGraph today?';\n  } else if (userMessage.toLowerCase().includes('address')) {\n    response = 'I can help you extract addresses from files. Would you like me to process a specific file?';\n  } else if (userMessage.toLowerCase().includes('help')) {\n    response = 'I can assist you with:\\n1. Chat interactions\\n2. Address extraction from files\\n3. GitHub repository access\\n\\nWhat would you like to do?';\n  } else {\n    response = `I received your message: \"${userMessage}\". I'm here to help with cityGraph functionalities.`;\n  }\n  \n  items.push({\n    json: {\n      user_id: userId,\n      session_id: sessionId,\n      user_message: userMessage,\n      bot_response: response,\n      timestamp: new Date().toISOString(),\n      context: 'citygraph_chat'\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "process-chat",
+      "name": "Process Chat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, data: $json, action: 'chat' } }}"
+      },
+      "id": "respond-chat",
+      "name": "Respond Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, data: $json, action: 'extract_address' } }}"
+      },
+      "id": "respond-address",
+      "name": "Respond Address",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: 'Invalid action. Use \"chat\" or \"extract_address\"' } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "https://api.github.com/repos/InnovateGPT/cityGraph_AG_MG/git/trees/main?recursive=1",
+        "options": {}
+      },
+      "id": "get-repo-tree",
+      "name": "Get Repository Tree",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [250, 600],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-header-auth",
+          "name": "GitHub Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "github-files",
+              "name": "files",
+              "type": "array",
+              "value": "={{ $json.tree }}"
+            },
+            {
+              "id": "file-count",
+              "name": "file_count",
+              "type": "number",
+              "value": "={{ $json.tree.length }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-file-list",
+      "name": "Format File List",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [450, 600]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is Chat Request?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Address Extract?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Chat Request?": {
+      "main": [
+        [
+          {
+            "node": "Process Chat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Address Extract?": {
+      "main": [
+        [
+          {
+            "node": "Fetch GitHub Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GitHub Files": {
+      "main": [
+        [
+          {
+            "node": "Fetch Specific File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Specific File": {
+      "main": [
+        [
+          {
+            "node": "Decode File Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decode File Content": {
+      "main": [
+        [
+          {
+            "node": "Extract Addresses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Addresses": {
+      "main": [
+        [
+          {
+            "node": "Respond Address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Chat": {
+      "main": [
+        [
+          {
+            "node": "Respond Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Repository Tree": {
+      "main": [
+        [
+          {
+            "node": "Format File List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "citygraph-n8n-workflow",
+  "meta": {
+    "instanceId": "citygraph-instance"
+  },
+  "tags": []
+}
